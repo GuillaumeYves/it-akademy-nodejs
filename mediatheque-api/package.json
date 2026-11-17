@@ -14,14 +14,20 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "seed": "prisma db seed",
+    "test": "node --env-file-if-exists=.env.test --test --test-global-setup=test/global-setup.js --test-concurrency=1 \"test/**/*.test.js\"",
     "postinstall": "prisma generate"
   },
   "license": "MIT",
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
     "dotenv": "^18.0.10",
     "express": "^5.3.0",
+    "express-rate-limit": "^8.7.4",
+    "helmet": "^8.3.0",
+    "jose": "^6.2.17",
     "pg": "^8.23.1",
     "zod": "^4.6.7"
   },
@@ -30,6 +36,7 @@
   },
   "allowScripts": {
     "prisma@7.10.1": true,
-    "@prisma/engines@7.10.1": true
+    "@prisma/engines@7.10.1": true,
+    "bcrypt": false
   }
 }

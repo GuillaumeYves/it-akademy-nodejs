@@ -9,11 +9,12 @@ export function createBookRepository(db) {
       return { items, total };
     },
 
-    // Inclut les emprunts en cours, du plus ancien au plus récent.
-    findByIdWithActiveLoans(id) {
+    // Inclut les emprunts en cours, éventuellement limités à un emprunteur.
+    findByIdWithActiveLoans(id, { borrowerId } = {}) {
+      const where = borrowerId === undefined ? { rendu: false } : { rendu: false, emprunteurId: borrowerId };
       return db.ouvrage.findUnique({
         where: { id },
-        include: { emprunts: { where: { rendu: false }, orderBy: { empruntLe: "asc" } } },
+        include: { emprunts: { where, orderBy: { empruntLe: "asc" } } },
       });
     },
 

@@ -1,12 +1,11 @@
 import { z } from "zod";
 import { idSchema, isoDateSchema, paginationSchema, queryBooleanSchema } from "./common.schema.js";
 
-const borrowerSchema = z.string().trim().min(2).max(80);
-
+// emprunteurId n'est pris en compte que pour un bibliothécaire ; un membre emprunte pour lui-même.
 export const createLoanSchema = z
   .object({
     ouvrageId: idSchema,
-    emprunteur: borrowerSchema,
+    emprunteurId: idSchema.optional(),
     empruntLe: isoDateSchema.optional(),
     retourPrevuLe: isoDateSchema,
   })
@@ -15,14 +14,10 @@ export const createLoanSchema = z
     path: ["retourPrevuLe"],
   });
 
-// L'ouvrage et l'état rendu ne se modifient pas ici : retour par une route dédiée.
-export const updateLoanSchema = z
-  .object({
-    emprunteur: borrowerSchema,
-    retourPrevuLe: isoDateSchema,
-  })
-  .partial()
-  .refine((data) => Object.keys(data).length > 0, "Au moins un champ à modifier");
+// Seule la date de retour prévue se modifie : ni l'ouvrage, ni le propriétaire, ni l'état rendu.
+export const updateLoanSchema = z.object({
+  retourPrevuLe: isoDateSchema,
+});
 
 export const listLoansQuerySchema = paginationSchema.extend({
   rendu: queryBooleanSchema.optional(),

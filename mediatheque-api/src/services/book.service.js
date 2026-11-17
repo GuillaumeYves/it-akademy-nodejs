@@ -1,4 +1,5 @@
 import { conflict, notFound } from "../erreurs.js";
+import { isLibrarian } from "../domain/roles.js";
 import { toPage, toSkipTake } from "./pagination.js";
 
 // Règles métier du catalogue.
@@ -12,8 +13,10 @@ export function createBookService({ repositories, transaction }) {
       return toPage(result, { page, limite });
     },
 
-    async getById(id) {
-      const book = await books.findByIdWithActiveLoans(id);
+    // Un membre ne voit que ses propres emprunts en cours sur l'ouvrage.
+    async getById(id, actor) {
+      const scope = isLibrarian(actor) ? {} : { borrowerId: actor.id };
+      const book = await books.findByIdWithActiveLoans(id, scope);
       if (!book) throw notFound("Ouvrage introuvable");
       return book;
     },
