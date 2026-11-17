@@ -1,11 +1,13 @@
 import { isLibrarian } from "../domain/roles.ts";
 import type { AuthUser } from "../domain/types.ts";
-import { forbidden, notFound } from "../erreurs.ts";
+import { notFound } from "../erreurs.ts";
 import type { UserRepository } from "../repositories/user.repository.ts";
 
-// Un bibliothécaire agit sur tout ; un membre seulement sur ce qui lui appartient.
-export function assertOwnerOrLibrarian(ownerId: number, actor: AuthUser, message: string): void {
-  if (!isLibrarian(actor) && ownerId !== actor.id) throw forbidden(message);
+// Un bibliothécaire voit tout ; un membre seulement ce qui lui appartient.
+// La ressource d'un autre membre lève la même erreur qu'une ressource absente (404) :
+// la réponse ne révèle pas qu'un identifiant existe.
+export function assertVisibleTo(ownerId: number, actor: AuthUser, notFoundError: () => Error): void {
+  if (!isLibrarian(actor) && ownerId !== actor.id) throw notFoundError();
 }
 
 // Filtre de liste : un membre ne voit que ses propres lignes.

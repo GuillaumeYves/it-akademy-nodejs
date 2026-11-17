@@ -24,6 +24,20 @@ describe("Autorisation sur le catalogue", () => {
     assert.equal(status, 200);
   });
 
+  it("ramène une limite trop grande au plafond de 50 au lieu de la refuser", async () => {
+    const { status, body } = await ctx.api("/api/ouvrages?limite=500", { token: tokens.alice });
+    assert.equal(status, 200);
+    assert.equal(body.limite, 50);
+    assert.ok(body.donnees.length <= 50);
+  });
+
+  it("refuse toujours une limite nulle ou non numérique", async () => {
+    for (const limite of ["0", "abc"]) {
+      const { status } = await ctx.api(`/api/ouvrages?limite=${limite}`, { token: tokens.alice });
+      assert.equal(status, 400);
+    }
+  });
+
   it("refuse la création d'un ouvrage à un membre en 403", async () => {
     const { status } = await ctx.api("/api/ouvrages", {
       method: "POST",
@@ -64,12 +78,17 @@ describe("Autorisation sur les emprunts", () => {
     assert.ok(body.donnees.every((loan: Json) => loan.emprunteurId === ctx.users.alice.id));
   });
 
-  it("refuse à un membre l'accès et la clôture de l'emprunt d'un autre en 403", async () => {
+  it("répond 404 à un membre sur l'emprunt d'un autre, exactement comme pour un emprunt absent", async () => {
     const bobLoan = await borrowAs("bob");
     const read = await ctx.api(`/api/emprunts/${bobLoan.id}`, { token: tokens.alice });
+    const update = await ctx.api(`/api/emprunts/${bobLoan.id}`, { method: "PATCH", token: tokens.alice, body: { retourPrevuLe: RETURN_DATE } });
     const close = await ctx.api(`/api/emprunts/${bobLoan.id}/retour`, { method: "POST", token: tokens.alice });
-    assert.equal(read.status, 403);
-    assert.equal(close.status, 403);
+    const missing = await ctx.api("/api/emprunts/999999", { token: tokens.alice });
+
+    for (const response of [read, update, close]) {
+      assert.equal(response.status, 404);
+      assert.deepEqual(response.body, missing.body);
+    }
   });
 
   it("masque à un membre les emprunts des autres dans le détail d'un ouvrage", async () => {

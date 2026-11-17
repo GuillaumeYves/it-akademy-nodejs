@@ -4,7 +4,10 @@ import type { AuthUser } from "../src/domain/types.ts";
 import type { BookService } from "../src/services/book.service.ts";
 import type { LoanService } from "../src/services/loan.service.ts";
 import type { ReservationService } from "../src/services/reservation.service.ts";
+import { ASSISTANT_INSTRUCTIONS, type AssistantService, createAssistantService } from "../src/services/assistant/assistant.service.ts";
 import { createConversationMemory } from "../src/services/assistant/memory.ts";
+import { estimateInputTokens, estimateTokens } from "../src/services/assistant/tokens.ts";
+import type { AssistantProvider, TokenUsage } from "../src/services/assistant/types.ts";
 import { createAssistantTools } from "../src/services/assistant/tools.ts";
 
 // Services factices : seuls les appels faits par les outils sont observés.
@@ -57,6 +60,59 @@ describe("Outils de l'assistant", () => {
       assert.equal(tool.parameters.type, "object");
       assert.equal(tool.parameters.$schema, undefined);
       assert.doesNotMatch(JSON.stringify(tool.parameters), /membre|utilisateur|emprunteur/i);
+    }
+  });
+});
+
+// Fournisseur factice : diffuse trois fragments, puis termine, s'arrête ou échoue.
+function fakeProvider(ending: "done" | "silent" | "error"): AssistantProvider {
+  return {
+    name: "factice",
+    async *stream() {
+      for (const text of ["un ", "deux ", "trois "]) yield { type: "delta", text };
+      if (ending === "error") throw new Error("panne du fournisseur");
+      if (ending === "done") yield { type: "done", usage: { inputTokens: 100, outputTokens: 3 } };
+    },
+  };
+}
+
+function serviceWith(provider: AssistantProvider) {
+  const recorded: TokenUsage[] = [];
+  const service = createAssistantService({
+    provider,
+    memory: createConversationMemory({ maxExchanges: 2 }),
+    buildTools: () => [],
+    recordUsage: async (_userId, usage) => void recorded.push(usage),
+    log: () => undefined,
+  });
+  return { service, recorded };
+}
+
+const ask = (service: AssistantService) => service.ask({ user: librarian, question: "Bonjour", signal: new AbortController().signal });
+
+describe("Consommation des flux de l'assistant", () => {
+  it("enregistre l'usage réel du fournisseur pour un flux complet, une seule fois", async () => {
+    const { service, recorded } = serviceWith(fakeProvider("done"));
+    for await (const _event of ask(service));
+    assert.deepEqual(recorded, [{ inputTokens: 100, outputTokens: 3 }]);
+  });
+
+  it("décompte une estimation quand le client coupe le flux en cours", async () => {
+    const { service, recorded } = serviceWith(fakeProvider("done"));
+    for await (const event of ask(service)) if (event.type === "delta") break;
+    assert.deepEqual(recorded, [
+      { inputTokens: estimateInputTokens(ASSISTANT_INSTRUCTIONS, [], "Bonjour"), outputTokens: estimateTokens("un ") },
+    ]);
+  });
+
+  it("décompte une estimation quand le fournisseur s'arrête ou échoue en route", async () => {
+    for (const ending of ["silent", "error"] as const) {
+      const { service, recorded } = serviceWith(fakeProvider(ending));
+      await (async () => {
+        for await (const _event of ask(service));
+      })().catch(() => undefined);
+      assert.equal(recorded.length, 1);
+      assert.equal(recorded[0]?.outputTokens, estimateTokens("un deux trois "));
     }
   });
 });

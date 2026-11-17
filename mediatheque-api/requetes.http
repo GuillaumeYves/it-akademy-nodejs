@@ -268,7 +268,7 @@ Authorization: {{biblio}}
 GET {{base}}/api/emprunts/1
 Authorization: {{camille}}
 
-### Détail de l'emprunt d'un autre membre : 403
+### Détail de l'emprunt d'un autre membre : 404, comme un emprunt absent
 GET {{base}}/api/emprunts/2
 Authorization: {{camille}}
 
@@ -351,7 +351,7 @@ Content-Type: application/json
   "emprunteurId": 3
 }
 
-### Clôture de l'emprunt d'un autre membre : 403
+### Clôture de l'emprunt d'un autre membre : 404, comme un emprunt absent
 POST {{base}}/api/emprunts/{{empruntPourNoe.response.body.id}}/retour
 Authorization: {{camille}}
 
@@ -434,7 +434,7 @@ Content-Type: application/json
   "ouvrageId": 9
 }
 
-### Réservation d'un autre membre : 403
+### Réservation d'un autre membre : 404, comme une réservation absente
 GET {{base}}/api/reservations/{{reservationCamille.response.body.id}}
 Authorization: {{noe}}
 

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { type AccountKey, parseSse, useTestContext } from "./helpers/context.ts";
 import { createTokenService } from "../src/security/tokens.ts";
+import { ASSISTANT_INSTRUCTIONS } from "../src/services/assistant/assistant.service.ts";
+import { estimateInputTokens } from "../src/services/assistant/tokens.ts";
 
 // Quota minuscule : une seule réponse suffit à l'épuiser.
 const ctx = useTestContext({ dailyTokenQuota: 20 });
@@ -18,10 +20,10 @@ describe("Consommation et quota de l'assistant", () => {
     assert.equal(words.length, 50);
   });
 
-  it("enregistre une ligne de consommation par réponse, jetons estimés à un pour quatre caractères", async () => {
+  it("enregistre une ligne de consommation par réponse, entrée estimée sur instructions, historique et question", async () => {
     const rows = await ctx.prisma.consommationIa.findMany({ where: { utilisateurId: ctx.users.alice.id } });
     assert.equal(rows.length, 1);
-    assert.equal(rows[0]?.jetonsEntree, Math.ceil("Bonjour".length / 4));
+    assert.equal(rows[0]?.jetonsEntree, estimateInputTokens(ASSISTANT_INSTRUCTIONS, [], "Bonjour"));
     assert.ok((rows[0]?.jetonsSortie ?? 0) > 20);
   });
 

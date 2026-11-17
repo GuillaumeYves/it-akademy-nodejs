@@ -5,12 +5,15 @@ import type { AssistantProvider } from "./types.ts";
 
 // Choix du fournisseur par IA_FOURNISSEUR : les routes et les tests ignorent lequel est actif.
 export function createAssistantProvider(settings: Config["assistant"]): AssistantProvider {
-  if (settings.provider === "openai" && settings.openaiApiKey) {
-    return createOpenAiProvider({
-      apiKey: settings.openaiApiKey,
-      model: settings.model,
-      maxOutputTokens: settings.maxOutputTokens,
-    });
+  if (settings.provider === "bouchon") return createStubProvider({ delayMs: settings.stubDelayMs });
+
+  // Jamais de repli silencieux sur le bouchon : sans clé, le démarrage échoue.
+  if (!settings.openaiApiKey) {
+    throw new Error("IA_FOURNISSEUR=openai exige OPENAI_API_KEY");
   }
-  return createStubProvider({ delayMs: settings.stubDelayMs });
+  return createOpenAiProvider({
+    apiKey: settings.openaiApiKey,
+    model: settings.model,
+    maxOutputTokens: settings.maxOutputTokens,
+  });
 }

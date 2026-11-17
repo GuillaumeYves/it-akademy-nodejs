@@ -1,4 +1,5 @@
 import { setTimeout as sleep } from "node:timers/promises";
+import { estimateInputTokens, estimateTokens } from "./tokens.ts";
 import type { AssistantProvider, AssistantTool } from "./types.ts";
 
 // Mots ignorés pour extraire le terme d'une recherche.
@@ -14,7 +15,6 @@ const DEFAULT_ANSWER = [
 ].join(" ");
 
 const normalize = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-const estimateTokens = (text: string) => Math.ceil(text.length / 4);
 
 // Choix de l'outil par mots-clés, à la place du raisonnement du modèle.
 function pickTool(question: string): { name: string; args: Record<string, string> } | null {
@@ -62,7 +62,7 @@ export function createStubProvider({ delayMs }: { delayMs: number }): AssistantP
   return {
     name: "bouchon",
 
-    async *stream({ question, tools, signal }) {
+    async *stream({ instructions, history, question, tools, signal }) {
       const choice = pickTool(question);
       let answer = DEFAULT_ANSWER;
 
@@ -77,7 +77,10 @@ export function createStubProvider({ delayMs }: { delayMs: number }): AssistantP
         if (signal.aborted) return;
         yield { type: "delta", text: `${word} ` };
       }
-      yield { type: "done", usage: { inputTokens: estimateTokens(question), outputTokens: estimateTokens(answer) } };
+      yield {
+        type: "done",
+        usage: { inputTokens: estimateInputTokens(instructions, history, question), outputTokens: estimateTokens(answer) },
+      };
     },
   };
 }
