@@ -1,0 +1,18 @@
+{
+  "name": "exercices-node-1",
+  "version": "1.0.0",
+  "description": "Node.js fundamentals: event loop, native modules and asynchronous code.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "order": "node src/event-loop-order.js",
+    "server": "node src/request-counter-server.js",
+    "count": "node src/compter.js",
+    "timers": "node src/timers-demo.js",
+    "download": "node src/download-demo.js",
+    "benchmark": "node src/benchmark.js"
+  },
+  "license": "MIT"
+}
