@@ -20,14 +20,15 @@ enum StatutReservation {
 
 // Compte de l'API. Le mot de passe n'est jamais stocké en clair.
 model Utilisateur {
-  id              Int            @id @default(autoincrement())
-  email           String         @unique @db.VarChar(254)
+  id              Int              @id @default(autoincrement())
+  email           String           @unique @db.VarChar(254)
   motDePasseHache String
-  role            Role           @default(membre)
-  creeLe          DateTime       @default(now())
+  role            Role             @default(membre)
+  creeLe          DateTime         @default(now())
   emprunts        Emprunt[]
   reservations    Reservation[]
   refreshTokens   RefreshToken[]
+  consommationsIa ConsommationIa[]
 }
 
 // Refresh token stocké sous forme d'empreinte SHA-256, révocable.
@@ -95,4 +96,17 @@ model Reservation {
   @@unique([ouvrageId, membreId, enCours])
   @@index([ouvrageId, statut, creeLe])
   @@index([membreId, statut])
+}
+
+// Jetons consommés par l'assistant, une ligne par réponse : base du quota journalier.
+model ConsommationIa {
+  id            Int         @id @default(autoincrement())
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  utilisateurId Int
+  creeLe        DateTime    @default(now())
+  jetonsEntree  Int
+  jetonsSortie  Int
+
+  @@index([utilisateurId, creeLe])
+  @@map("consommation_ia")
 }

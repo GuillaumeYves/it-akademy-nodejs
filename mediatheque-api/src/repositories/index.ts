@@ -3,6 +3,7 @@ import { createBookRepository } from "./book.repository.ts";
 import { createLoanRepository } from "./loan.repository.ts";
 import { createRefreshTokenRepository } from "./refresh-token.repository.ts";
 import { createReservationRepository } from "./reservation.repository.ts";
+import { createUsageRepository } from "./usage.repository.ts";
 import { createUserRepository } from "./user.repository.ts";
 
 // Regroupe les dépôts autour d'un même client (Prisma ou transaction).
@@ -13,6 +14,7 @@ export function createRepositories(db: Db) {
     reservations: createReservationRepository(db),
     users: createUserRepository(db),
     refreshTokens: createRefreshTokenRepository(db),
+    usage: createUsageRepository(db),
   };
 }
 

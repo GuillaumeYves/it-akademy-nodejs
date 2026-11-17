@@ -78,6 +78,8 @@ export function loadConfig() {
       maxOutputTokens: integer("IA_MAX_JETONS_SORTIE", 400),
       memoryExchanges: 10,
       stubDelayMs: integer("IA_BOUCHON_DELAI_MS", 40),
+      // Jetons d'entrée et de sortie autorisés par compte et par jour.
+      dailyTokenQuota: integer("IA_QUOTA_JETONS_JOUR", 20_000),
     },
   };
 }

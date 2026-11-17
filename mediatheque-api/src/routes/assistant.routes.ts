@@ -8,7 +8,8 @@ import type { AssistantService } from "../services/assistant/assistant.service.t
 
 interface AssistantRoutesDependencies {
   assistantService: AssistantService;
-  limiter: RequestHandler;
+  // Limite de débit puis quota journalier, appliqués avant la validation.
+  guards: RequestHandler[];
 }
 
 const SSE_DESCRIPTION = [
@@ -21,7 +22,7 @@ const SSE_DESCRIPTION = [
 ].join("\n");
 
 // /api/assistant : questions en langage naturel, réponse diffusée en Server-Sent Events.
-export function assistantRoutes({ assistantService, limiter }: AssistantRoutesDependencies): RouteGroup {
+export function assistantRoutes({ assistantService, guards }: AssistantRoutesDependencies): RouteGroup {
   return {
     prefix: "/api/assistant",
     tag: "Assistant",
@@ -31,9 +32,9 @@ export function assistantRoutes({ assistantService, limiter }: AssistantRoutesDe
         method: "post",
         path: "/flux",
         summary: "Poser une question à l'assistant",
-        description: `${SSE_DESCRIPTION}\n\nLimité à 10 questions par minute et par compte.`,
+        description: `${SSE_DESCRIPTION}\n\nLimité à 10 questions par minute et par compte, et à un quota de jetons par jour (429 au-delà).`,
         access: "authenticated",
-        middlewares: [limiter],
+        middlewares: guards,
         body: questionSchema,
         responses: {
           200: { description: "Réponse diffusée en Server-Sent Events", contentType: "text/event-stream", schema: z.string() },
