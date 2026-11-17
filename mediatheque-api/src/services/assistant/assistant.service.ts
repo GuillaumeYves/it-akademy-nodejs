@@ -1,6 +1,6 @@
 import type { AuthUser } from "../../domain/types.ts";
 import type { ConversationMemory } from "./memory.ts";
-import type { AssistantEvent, AssistantProvider, AssistantTool } from "./types.ts";
+import type { AssistantEvent, AssistantProvider, AssistantTool, TokenUsage } from "./types.ts";
 
 // Cadre fixe donné au modèle. Les règles d'accès ne reposent pas dessus : elles sont dans les outils.
 const INSTRUCTIONS = [
@@ -15,6 +15,8 @@ interface AssistantDependencies {
   provider: AssistantProvider;
   memory: ConversationMemory;
   buildTools(user: AuthUser): AssistantTool[];
+  // Enregistre les jetons d'une réponse, base du quota journalier.
+  recordUsage(userId: number, usage: TokenUsage): Promise<void>;
   log(message: string): void;
 }
 
@@ -25,7 +27,7 @@ export interface AskInput {
 }
 
 // Orchestration : historique, outils de l'utilisateur, fournisseur, mémoire et journal des jetons.
-export function createAssistantService({ provider, memory, buildTools, log }: AssistantDependencies) {
+export function createAssistantService({ provider, memory, buildTools, recordUsage, log }: AssistantDependencies) {
   return {
     providerName: provider.name,
 
@@ -48,6 +50,7 @@ export function createAssistantService({ provider, memory, buildTools, log }: As
             { role: "assistant", content: answer.trim() },
           ]);
           const { inputTokens, outputTokens } = event.usage;
+          await recordUsage(user.id, event.usage);
           log(`assistant utilisateur=${user.id} fournisseur=${provider.name} jetons=${inputTokens}+${outputTokens}`);
         }
         yield event;

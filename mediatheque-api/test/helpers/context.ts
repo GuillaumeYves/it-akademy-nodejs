@@ -7,7 +7,7 @@ import { createPrismaClient, type PrismaClient } from "../../src/db/prisma.ts";
 import type { Role } from "../../src/domain/types.ts";
 import { createPasswordHasher } from "../../src/security/password.ts";
 
-const TABLES = ['"RefreshToken"', '"Reservation"', '"Emprunt"', '"Ouvrage"', '"Utilisateur"'];
+const TABLES = ["consommation_ia", '"RefreshToken"', '"Reservation"', '"Emprunt"', '"Ouvrage"', '"Utilisateur"'];
 
 export const PASSWORD = "Mot-de-passe-de-test-1";
 
@@ -41,6 +41,7 @@ interface Overrides {
   corsOrigins?: string[];
   rateLimit?: Partial<Config["rateLimit"]>;
   stubDelayMs?: number;
+  dailyTokenQuota?: number;
 }
 
 export interface TestContext {
@@ -66,7 +67,12 @@ export function useTestContext(overrides: Overrides = {}, { onReady }: { onReady
       corsOrigins: overrides.corsOrigins ?? base.corsOrigins,
       rateLimit: { ...base.rateLimit, ...overrides.rateLimit },
       // Les tests n'appellent jamais de fournisseur réel.
-      assistant: { ...base.assistant, provider: "bouchon", stubDelayMs: overrides.stubDelayMs ?? 0 },
+      assistant: {
+        ...base.assistant,
+        provider: "bouchon",
+        stubDelayMs: overrides.stubDelayMs ?? 0,
+        dailyTokenQuota: overrides.dailyTokenQuota ?? base.assistant.dailyTokenQuota,
+      },
     };
     const prisma = createPrismaClient(config.databaseUrl);
     await prisma.$executeRawUnsafe(`TRUNCATE ${TABLES.join(", ")} RESTART IDENTITY CASCADE`);

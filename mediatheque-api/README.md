@@ -119,6 +119,7 @@ Le seed crée aussi une situation de file d'attente : Camille emprunte « Les Mi
 | `IA_MAX_JETONS_SORTIE` | plafond de jetons générés par réponse | `400` |
 | `ASSISTANT_RATE_LIMIT_MAX` | questions par minute et par compte | `10` |
 | `IA_BOUCHON_DELAI_MS` | délai entre deux mots diffusés par le bouchon | `40` |
+| `IA_QUOTA_JETONS_JOUR` | jetons d'entrée et de sortie autorisés par compte et par jour | `20000` |
 
 `.env` et `.env.test` ne sont jamais versionnés. Les fichiers `.env.example` et `.env.test.example`
 ne contiennent que des valeurs factices. La configuration est contrôlée au démarrage : une variable
@@ -388,6 +389,9 @@ Fonctionnement :
 - **arrêt** : si le client ferme la connexion, la génération est interrompue (`AbortController`) et l'arrêt est journalisé ;
 - **coût** : 10 questions par minute et par compte, réponses plafonnées à `IA_MAX_JETONS_SORTIE` jetons,
   3 tours d'outils au plus par question, jetons journalisés pour chaque réponse ;
+- **quota journalier** : chaque réponse ajoute une ligne à la table `consommation_ia` (compte, date, jetons d'entrée
+  et de sortie). Le middleware `quotaIa(limiteJetonsParJour)` refuse en 429 le compte qui a atteint
+  `IA_QUOTA_JETONS_JOUR` jetons depuis minuit UTC. Avec le bouchon, un jeton vaut quatre caractères ;
 - **fournisseurs** : `openai` utilise l'API Responses en streaming avec appel de fonctions ; `bouchon` choisit l'outil
   par mots-clés et diffuse une réponse construite à partir des vrais résultats, sans réseau ni clé.
   Les routes ignorent quel fournisseur est actif.
@@ -402,7 +406,7 @@ Fonctionnement :
 | API1 Autorisation au niveau des objets cassée | `GET /api/emprunts/42` d'un autre membre | contrôle de propriété dans les services (403), listes filtrées sur le compte, outils de l'assistant liés à l'identité du jeton |
 | API2 Authentification cassée | jetons sans expiration, secret faible | access token de 15 minutes, secret aléatoire de 32 caractères au moins contrôlé au démarrage, rotation et détection de rejeu des refresh tokens, 429 sur `/api/auth` |
 | API3 Exposition excessive de données | renvoyer `motDePasseHache` | `select` explicite dans les dépôts, schémas de réponse documentés, emprunts des autres masqués dans le détail d'un ouvrage |
-| API4 Consommation de ressources illimitée | corps de 50 Mo, liste non paginée, questions en rafale | JSON limité à 100 Ko, pagination plafonnée à 50, question de 500 caractères, 10 questions par minute, jetons de sortie plafonnés, flux arrêté à la déconnexion |
+| API4 Consommation de ressources illimitée | corps de 50 Mo, liste non paginée, questions en rafale | JSON limité à 100 Ko, pagination plafonnée à 50, question de 500 caractères, 10 questions par minute, quota de jetons par jour, jetons de sortie plafonnés, flux arrêté à la déconnexion |
 | API5 Autorisation au niveau des fonctions cassée | `DELETE /api/ouvrages` ouvert aux membres | accès déclaré sur chaque route (`public`, `authenticated` ou liste de rôles), vérifié avant la validation |
 | API6 Affectation en masse | `role: "admin"` à l'inscription | Zod retire les champs inconnus ; `role`, `emprunteurId`, `membreId` ignorés pour un membre ; `PATCH` d'emprunt limité à la date |
 | API7 Mauvaise configuration | pile dans les réponses, CORS `*` | gestionnaire d'erreurs central sans pile, helmet, origines CORS explicites, conteneur non privilégié |
@@ -439,6 +443,7 @@ les tests si le nom de la base ne contient pas `test`. Chaque fichier repart d'u
 | `test/hardening.test.ts` | en-têtes helmet, CORS, 413, réponse sans pile, 429 à la onzième tentative |
 | `test/reservations.test.ts` | réservation d'un ouvrage indisponible, 409 (disponible, déjà emprunté, doublon simultané), passage au suivant lors du retour, annulation, droits |
 | `test/assistant.test.ts` | 401, 400, flux SSE (`data:` puis `event: fin`), appel d'outil, isolation des emprunts entre membres, mémoire, 429 |
+| `test/assistant-quota.test.ts` | réponse du bouchon en cinquante mots, ligne `consommation_ia` par réponse, 429 au-delà du quota du jour, quota propre à chaque compte |
 | `test/assistant-units.test.ts` | validation des arguments d'outils, outils restreints au compte connecté, mémoire tronquée par utilisateur |
 | `test/openapi.test.ts` | `/api/docs.json` en 3.1, couverture des ressources, `bearerAuth` sur chaque opération protégée, Swagger UI |
 

@@ -4,6 +4,15 @@ import type { AssistantProvider, AssistantTool } from "./types.ts";
 // Mots ignorés pour extraire le terme d'une recherche.
 const STOP_WORDS = new Set(["avez", "vous", "livre", "livres", "ouvrage", "ouvrages", "auteur", "disponible", "cherche", "chercher", "sur", "des", "les", "une", "est", "qui", "que", "dans", "pour"]);
 
+// Réponse sans outil : cinquante mots, assez long pour observer le flux et son interruption.
+// Les espaces insécables devant « : » et « ? » évitent d'en faire des mots à part.
+const DEFAULT_ANSWER = [
+  "[bouchon] Bonjour, je suis l'assistant de la médiathèque.",
+  "Je peux chercher un ouvrage dans le catalogue par son titre ou son auteur,",
+  "lister vos emprunts en cours avec leur date de retour, et rappeler vos réservations actives.",
+  "Posez votre question simplement, par exemple : quels livres d'Émile Zola avez-vous en rayon ?",
+].join(" ");
+
 const normalize = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const estimateTokens = (text: string) => Math.ceil(text.length / 4);
 
@@ -55,7 +64,7 @@ export function createStubProvider({ delayMs }: { delayMs: number }): AssistantP
 
     async *stream({ question, tools, signal }) {
       const choice = pickTool(question);
-      let answer = `[bouchon] Je suis l'assistant de la médiathèque. Posez-moi une question sur le catalogue, vos emprunts ou vos réservations.`;
+      let answer = DEFAULT_ANSWER;
 
       if (choice) {
         yield { type: "tool", name: choice.name };

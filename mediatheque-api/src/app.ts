@@ -6,6 +6,7 @@ import { buildOpenApiDocument } from "./http/openapi.ts";
 import { mountGroup, type RouteGroup } from "./http/route.ts";
 import { authenticate } from "./middlewares/authenticate.ts";
 import { errorHandler, notFoundHandler } from "./middlewares/error-handler.ts";
+import { createQuotaIa } from "./middlewares/quota-ia.ts";
 import { requestLogger } from "./middlewares/request-logger.ts";
 import { corsPolicy, perUserKey, rateLimiter, securityHeaders } from "./middlewares/security.ts";
 import { createDataAccess } from "./repositories/index.ts";
@@ -44,8 +45,10 @@ function createServices({ prisma, config }: AppDependencies) {
   const bookService = createBookService(dataAccess);
   const loanService = createLoanService(dataAccess, { loanDurationDays: config.loanDurationDays });
   const reservationService = createReservationService(dataAccess);
+  const { usage } = dataAccess.repositories;
 
   return {
+    quotaIa: createQuotaIa(usage),
     tokenService,
     bookService,
     loanService,
@@ -59,6 +62,9 @@ function createServices({ prisma, config }: AppDependencies) {
       provider: createAssistantProvider(config.assistant),
       memory: createConversationMemory({ maxExchanges: config.assistant.memoryExchanges }),
       buildTools: (user) => createAssistantTools(user, { bookService, loanService, reservationService }),
+      recordUsage: async (utilisateurId, { inputTokens, outputTokens }) => {
+        await usage.record({ utilisateurId, jetonsEntree: inputTokens, jetonsSortie: outputTokens });
+      },
       log: (message) => console.log(message),
     }),
   };
@@ -77,7 +83,10 @@ export function createApp({ prisma, config }: AppDependencies): Express {
     reservationRoutes(services),
     assistantRoutes({
       assistantService: services.assistantService,
-      limiter: rateLimiter({ max: rateLimit.assistantMax, windowMs: rateLimit.assistantWindowMs, keyGenerator: perUserKey }),
+      guards: [
+        rateLimiter({ max: rateLimit.assistantMax, windowMs: rateLimit.assistantWindowMs, keyGenerator: perUserKey }),
+        services.quotaIa(config.assistant.dailyTokenQuota),
+      ],
     }),
   ];
   const openApiDocument = buildOpenApiDocument(groups, API_INFO);
