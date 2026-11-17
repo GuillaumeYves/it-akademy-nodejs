@@ -391,7 +391,10 @@ Fonctionnement :
   3 tours d'outils au plus par question, jetons journalisés pour chaque réponse ;
 - **quota journalier** : chaque réponse ajoute une ligne à la table `consommation_ia` (compte, date, jetons d'entrée
   et de sortie). Le middleware `quotaIa(limiteJetonsParJour)` refuse en 429 le compte qui a atteint
-  `IA_QUOTA_JETONS_JOUR` jetons depuis minuit UTC. Avec le bouchon, un jeton vaut quatre caractères ;
+  `IA_QUOTA_JETONS_JOUR` jetons depuis minuit UTC. Avec le bouchon, un jeton vaut quatre caractères.
+  Un flux coupé par le client ou en erreur est aussi décompté : le fournisseur facture les jetons déjà générés,
+  donc la consommation est estimée (instructions, historique, question et texte déjà diffusé) et le quota
+  ne peut pas être contourné en coupant les flux ;
 - **fournisseurs** : `openai` utilise l'API Responses en streaming avec appel de fonctions ; `bouchon` choisit l'outil
   par mots-clés et diffuse une réponse construite à partir des vrais résultats, sans réseau ni clé.
   Les routes ignorent quel fournisseur est actif.

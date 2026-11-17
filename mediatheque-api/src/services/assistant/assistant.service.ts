@@ -1,9 +1,10 @@
 import type { AuthUser } from "../../domain/types.ts";
 import type { ConversationMemory } from "./memory.ts";
+import { estimateInputTokens, estimateTokens } from "./tokens.ts";
 import type { AssistantEvent, AssistantProvider, AssistantTool, TokenUsage } from "./types.ts";
 
 // Cadre fixe donné au modèle. Les règles d'accès ne reposent pas dessus : elles sont dans les outils.
-const INSTRUCTIONS = [
+export const ASSISTANT_INSTRUCTIONS = [
   "Vous êtes l'assistant d'une médiathèque associative. Répondez en français, brièvement et poliment.",
   "Pour toute question sur le catalogue, les emprunts ou les réservations, utilisez les outils fournis",
   "et appuyez-vous uniquement sur leurs résultats. N'inventez jamais d'ouvrage ni de date.",
@@ -32,28 +33,40 @@ export function createAssistantService({ provider, memory, buildTools, recordUsa
     providerName: provider.name,
 
     async *ask({ user, question, signal }: AskInput): AsyncGenerator<AssistantEvent> {
-      const stream = provider.stream({
-        instructions: INSTRUCTIONS,
-        history: memory.get(user.id),
-        question,
-        tools: buildTools(user),
-        signal,
-      });
+      const history = memory.get(user.id);
+      const stream = provider.stream({ instructions: ASSISTANT_INSTRUCTIONS, history, question, tools: buildTools(user), signal });
+
+      // Enregistre la consommation et la journalise, flux complet ou non.
+      const account = async (usage: TokenUsage, status: string) => {
+        await recordUsage(user.id, usage);
+        log(`assistant utilisateur=${user.id} fournisseur=${provider.name} jetons=${usage.inputTokens}+${usage.outputTokens} ${status}`);
+      };
 
       let answer = "";
-      for await (const event of stream) {
-        if (event.type === "delta") answer += event.text;
-        if (event.type === "done") {
-          // Un échange n'entre en mémoire que s'il est complet.
-          memory.append(user.id, [
-            { role: "user", content: question },
-            { role: "assistant", content: answer.trim() },
-          ]);
-          const { inputTokens, outputTokens } = event.usage;
-          await recordUsage(user.id, event.usage);
-          log(`assistant utilisateur=${user.id} fournisseur=${provider.name} jetons=${inputTokens}+${outputTokens}`);
+      let accounted = false;
+      try {
+        for await (const event of stream) {
+          if (event.type === "delta") answer += event.text;
+          if (event.type === "done") {
+            // Un échange n'entre en mémoire que s'il est complet.
+            memory.append(user.id, [
+              { role: "user", content: question },
+              { role: "assistant", content: answer.trim() },
+            ]);
+            accounted = true;
+            await account(event.usage, "complet");
+          }
+          yield event;
         }
-        yield event;
+      } finally {
+        // Flux coupé ou en erreur : le fournisseur facture ce qui a déjà été généré,
+        // donc la consommation estimée compte aussi dans le quota.
+        if (!accounted) {
+          await account(
+            { inputTokens: estimateInputTokens(ASSISTANT_INSTRUCTIONS, history, question), outputTokens: estimateTokens(answer) },
+            "interrompu (estimation)",
+          );
+        }
       }
     },
 
