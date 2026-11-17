@@ -384,6 +384,127 @@ DELETE {{base}}/api/emprunts/9999
 Authorization: {{biblio}}
 
 # =====================================================================
+# Réservations
+# Seed : Camille emprunte l'ouvrage 1, Noé l'a réservé ; Noé emprunte l'ouvrage 4.
+# =====================================================================
+
+### Réservations de Noé : 200, la sienne seulement
+GET {{base}}/api/reservations
+Authorization: {{noe}}
+
+### Toutes les réservations, filtrées sur les actives : 200
+GET {{base}}/api/reservations?statut=active
+Authorization: {{biblio}}
+
+### Réserver un ouvrage emprunté par un autre, membreId ignoré : 201
+# @name reservationCamille
+POST {{base}}/api/reservations
+Authorization: {{camille}}
+Content-Type: application/json
+
+{
+  "ouvrageId": 4,
+  "membreId": 3
+}
+
+### Deuxième réservation active du même ouvrage : 409
+POST {{base}}/api/reservations
+Authorization: {{camille}}
+Content-Type: application/json
+
+{
+  "ouvrageId": 4
+}
+
+### Réserver un ouvrage que l'on emprunte déjà : 409
+POST {{base}}/api/reservations
+Authorization: {{noe}}
+Content-Type: application/json
+
+{
+  "ouvrageId": 4
+}
+
+### Réserver un ouvrage disponible : 409
+POST {{base}}/api/reservations
+Authorization: {{camille}}
+Content-Type: application/json
+
+{
+  "ouvrageId": 9
+}
+
+### Réservation d'un autre membre : 403
+GET {{base}}/api/reservations/{{reservationCamille.response.body.id}}
+Authorization: {{noe}}
+
+### Annulation de sa réservation : 204
+DELETE {{base}}/api/reservations/{{reservationCamille.response.body.id}}
+Authorization: {{camille}}
+
+### Annulation d'une réservation déjà clôturée : 409
+DELETE {{base}}/api/reservations/{{reservationCamille.response.body.id}}
+Authorization: {{camille}}
+
+### Retour d'un ouvrage réservé : 200, empruntSuivant est l'emprunt créé pour Noé
+POST {{base}}/api/emprunts/1/retour
+Authorization: {{camille}}
+
+### La réservation de Noé est honorée : 200
+GET {{base}}/api/reservations?statut=honoree
+Authorization: {{noe}}
+
+# =====================================================================
+# Assistant (réponse en Server-Sent Events)
+# =====================================================================
+
+### Question avec appel d'outil : 200, flux text/event-stream
+POST {{base}}/api/assistant/flux
+Authorization: {{noe}}
+Content-Type: application/json
+
+{
+  "question": "Quels sont mes emprunts ?"
+}
+
+### Recherche dans le catalogue : 200
+POST {{base}}/api/assistant/flux
+Authorization: {{camille}}
+Content-Type: application/json
+
+{
+  "question": "Avez-vous des livres de Zola ?"
+}
+
+### Question vide : 400
+POST {{base}}/api/assistant/flux
+Authorization: {{camille}}
+Content-Type: application/json
+
+{
+  "question": "   "
+}
+
+### Sans jeton : 401
+POST {{base}}/api/assistant/flux
+Content-Type: application/json
+
+{
+  "question": "Bonjour"
+}
+
+### Effacer la conversation : 204
+DELETE {{base}}/api/assistant/memoire
+Authorization: {{noe}}
+
+# =====================================================================
+# Documentation
+# =====================================================================
+
+### Spécification OpenAPI 3.1 : 200
+GET {{base}}/api/docs.json
+
+# =====================================================================
 # Divers
 # =====================================================================
 
