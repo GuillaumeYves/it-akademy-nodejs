@@ -114,7 +114,7 @@ Le seed crée aussi une situation de file d'attente : Camille emprunte « Les Mi
 | `TRUST_PROXY` | nombre de proxys de confiance (adresse IP réelle du client) | `0` |
 | `DUREE_EMPRUNT_JOURS` | durée de l'emprunt créé pour une réservation honorée | `14` |
 | `IA_FOURNISSEUR` | fournisseur de l'assistant : `bouchon` ou `openai` | `bouchon` |
-| `OPENAI_API_KEY` | clé OpenAI, exigée seulement avec `IA_FOURNISSEUR=openai` | aucune |
+| `OPENAI_API_KEY` | clé OpenAI, exigée avec `IA_FOURNISSEUR=openai` : sans elle, le serveur refuse de démarrer | aucune |
 | `OPENAI_MODELE` | modèle utilisé | `gpt-4.1-mini` |
 | `IA_MAX_JETONS_SORTIE` | plafond de jetons générés par réponse | `400` |
 | `ASSISTANT_RATE_LIMIT_MAX` | questions par minute et par compte | `10` |
