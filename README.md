@@ -8,7 +8,7 @@ intégration d'un modèle de langage.
 
 | Dossier | Sujet |
 | ------- | ----- |
-| [`mediatheque-api/`](mediatheque-api) | API REST de médiathèque : TP 1, TP 2 puis projet final |
+| [`mediatheque-api/`](mediatheque-api) | API REST de médiathèque : TP 2 puis projet final, état validé. L'API vit désormais dans son dépôt dédié, [mediatheque-api](https://github.com/GuillaumeYves/mediatheque-api), qui porte aussi le TP 1 |
 | [`exercices/exercices-node-1/`](exercices/exercices-node-1) | boucle d'événements, modules natifs, asynchrone |
 | [`exercices/exercices-express/`](exercices/exercices-express) | API REST Express 5 en mémoire, Zod, multer |
 | [`exercices/api-taches/`](exercices/api-taches) | API de tâches PostgreSQL et Prisma, support des exercices 3 à 5 |
