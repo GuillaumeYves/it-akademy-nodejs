@@ -42,6 +42,7 @@ jobs:
       CORS_ORIGINS: http://localhost:5173
       AUTH_RATE_LIMIT_MAX: "1000"
       GLOBAL_RATE_LIMIT_MAX: "10000"
+      IA_FOURNISSEUR: bouchon
 
     steps:
       - uses: actions/checkout@v4
@@ -58,4 +59,10 @@ jobs:
 
       - run: npm ci
       - run: npm audit --audit-level=high
+      - run: npm run check
       - run: npm test
+      - run: npm run build
+
+      # Vérifie que l'image de production se construit.
+      - name: Build Docker image
+        run: docker build -t mediatheque-api:ci .
