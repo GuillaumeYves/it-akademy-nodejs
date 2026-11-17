@@ -1,0 +1,39 @@
+// Exercices 3, n° 2 : école en relationnel. Plusieurs-à-plusieurs explicite avec données propres.
+
+generator client {
+  provider = "prisma-client"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Cours {
+  id           Int           @id @default(autoincrement())
+  titre        String        @db.VarChar(150)
+  creeLe       DateTime      @default(now())
+  inscriptions Inscription[]
+}
+
+model Apprenant {
+  id           Int           @id @default(autoincrement())
+  nom          String        @db.VarChar(100)
+  email        String        @unique @db.VarChar(254)
+  inscriptions Inscription[]
+}
+
+// Table de jonction : une inscription par couple apprenant et cours.
+model Inscription {
+  apprenant   Apprenant @relation(fields: [apprenantId], references: [id], onDelete: Cascade)
+  apprenantId Int
+  cours       Cours     @relation(fields: [coursId], references: [id], onDelete: Restrict)
+  coursId     Int
+  inscritLe   DateTime  @default(now())
+  // Note facultative sur 20, deux décimales.
+  note        Decimal?  @db.Decimal(4, 2)
+
+  // La clé composite indexe déjà apprenantId en premier : on ajoute l'index sur coursId.
+  @@id([apprenantId, coursId])
+  @@index([coursId])
+}

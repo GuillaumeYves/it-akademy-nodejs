@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  membre
+  admin
+}
+
+// Compte de l'API. tachesEnCours compte ses tâches non terminées.
+model Utilisateur {
+  id              Int            @id @default(autoincrement())
+  email           String         @unique @db.VarChar(254)
+  motDePasseHache String
+  role            Role           @default(membre)
+  tachesEnCours   Int            @default(0)
+  creeLe          DateTime       @default(now())
+  taches          Tache[]
+  refreshTokens   RefreshToken[]
+}
+
+// Refresh token stocké sous forme d'empreinte SHA-256, révocable.
+model RefreshToken {
+  id            Int         @id @default(autoincrement())
+  empreinte     String      @unique @db.Char(64)
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  utilisateurId Int
+  expireLe      DateTime
+  revoqueLe     DateTime?
+
+  @@index([utilisateurId])
+}
+
+// Tâche d'un utilisateur. Restrict : un compte avec des tâches ne se supprime pas par accident.
+model Tache {
+  id             Int         @id @default(autoincrement())
+  titre          String      @db.VarChar(200)
+  faite          Boolean     @default(false)
+  creeLe         DateTime    @default(now())
+  modifieLe      DateTime    @updatedAt
+  proprietaire   Utilisateur @relation(fields: [proprietaireId], references: [id], onDelete: Restrict)
+  proprietaireId Int
+
+  @@index([proprietaireId, faite])
+  @@index([faite, creeLe])
+}
