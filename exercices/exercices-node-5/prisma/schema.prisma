@@ -1,0 +1,18 @@
+// Modèle minimal de l'API de tâches, pour typer le dépôt de l'exercice 4. Aucune base n'est nécessaire.
+
+generator client {
+  provider = "prisma-client"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Tache {
+  id        Int       @id @default(autoincrement())
+  titre     String
+  faite     Boolean   @default(false)
+  echeance  DateTime?
+  creeLe    DateTime  @default(now())
+}

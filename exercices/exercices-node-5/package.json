@@ -1,0 +1,28 @@
+{
+  "name": "exercices-node-5",
+  "version": "1.0.0",
+  "description": "Streams and strict TypeScript exercises: memory-bounded CSV filter, typed Prisma repository, compiler errors.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "filtrer": "node src/filtrer.js",
+    "generer": "node scripts/generer-mesures.js",
+    "check": "tsc --noEmit",
+    "test": "node --test",
+    "postinstall": "prisma generate"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@prisma/client": "^7.10.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.19.2",
+    "prisma": "^7.10.1",
+    "typescript": "^7.0.2"
+  },
+  "allowScripts": {
+    "prisma@7.10.1": true,
+    "@prisma/engines@7.10.1": true
+  }
+}
