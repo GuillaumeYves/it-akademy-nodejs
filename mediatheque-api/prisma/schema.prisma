@@ -7,6 +7,35 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  membre
+  bibliothecaire
+}
+
+// Compte de l'API. Le mot de passe n'est jamais stocké en clair.
+model Utilisateur {
+  id              Int            @id @default(autoincrement())
+  email           String         @unique @db.VarChar(254)
+  motDePasseHache String
+  role            Role           @default(membre)
+  creeLe          DateTime       @default(now())
+  emprunts        Emprunt[]
+  refreshTokens   RefreshToken[]
+}
+
+// Refresh token stocké sous forme d'empreinte SHA-256, révocable.
+model RefreshToken {
+  id            Int         @id @default(autoincrement())
+  empreinte     String      @unique @db.Char(64)
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  utilisateurId Int
+  expireLe      DateTime
+  revoqueLe     DateTime?
+  creeLe        DateTime    @default(now())
+
+  @@index([utilisateurId])
+}
+
 // Ouvrage du catalogue, indisponible tant qu'un emprunt est en cours.
 model Ouvrage {
   id         Int       @id @default(autoincrement())
@@ -21,17 +50,19 @@ model Ouvrage {
   @@index([disponible])
 }
 
-// Emprunt d'un ouvrage. Restrict empêche de supprimer un ouvrage qui a des emprunts.
+// Emprunt d'un ouvrage par un utilisateur. Restrict protège l'historique.
 model Emprunt {
-  id            Int       @id @default(autoincrement())
-  ouvrage       Ouvrage   @relation(fields: [ouvrageId], references: [id], onDelete: Restrict)
+  id            Int         @id @default(autoincrement())
+  ouvrage       Ouvrage     @relation(fields: [ouvrageId], references: [id], onDelete: Restrict)
   ouvrageId     Int
-  emprunteur    String    @db.VarChar(80)
-  empruntLe     DateTime  @default(now())
+  emprunteur    Utilisateur @relation(fields: [emprunteurId], references: [id], onDelete: Restrict)
+  emprunteurId  Int
+  empruntLe     DateTime    @default(now())
   retourPrevuLe DateTime
-  rendu         Boolean   @default(false)
+  rendu         Boolean     @default(false)
   renduLe       DateTime?
 
   @@index([ouvrageId, rendu])
+  @@index([emprunteurId, rendu])
   @@index([rendu])
 }

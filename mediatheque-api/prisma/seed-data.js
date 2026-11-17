@@ -1,6 +1,13 @@
-// Données de démonstration : ouvrages du domaine public, emprunteurs fictifs.
+// Données de démonstration : ouvrages du domaine public, comptes et prénoms fictifs.
 const DAY_MS = 24 * 60 * 60 * 1000;
 const daysFromNow = (days) => new Date(Date.now() + days * DAY_MS);
+
+// Mots de passe factices, documentés dans le README, à ne jamais réutiliser ailleurs.
+export const users = [
+  { email: "bibliothecaire@example.net", motDePasse: "Demo-Biblio-2026!", role: "bibliothecaire" },
+  { email: "camille@example.net", motDePasse: "Demo-Camille-2026!", role: "membre" },
+  { email: "noe@example.net", motDePasse: "Demo-Noe-2026!", role: "membre" },
+];
 
 export const books = [
   { id: 1, titre: "Les Misérables", auteur: "Victor Hugo", annee: 1862 },
@@ -15,13 +22,14 @@ export const books = [
   { id: 10, titre: "Bel-Ami", auteur: "Guy de Maupassant", annee: 1885 },
 ];
 
+// L'emprunteur est désigné par son e-mail, résolu en identifiant au moment du seed.
 export const loans = [
-  { id: 1, ouvrageId: 1, emprunteur: "Camille", empruntLe: daysFromNow(-10), retourPrevuLe: daysFromNow(4) },
-  { id: 2, ouvrageId: 4, emprunteur: "Noé", empruntLe: daysFromNow(-3), retourPrevuLe: daysFromNow(11) },
+  { id: 1, ouvrageId: 1, emprunteur: "camille@example.net", empruntLe: daysFromNow(-10), retourPrevuLe: daysFromNow(4) },
+  { id: 2, ouvrageId: 4, emprunteur: "noe@example.net", empruntLe: daysFromNow(-3), retourPrevuLe: daysFromNow(11) },
   {
     id: 3,
     ouvrageId: 6,
-    emprunteur: "Inès",
+    emprunteur: "camille@example.net",
     empruntLe: daysFromNow(-30),
     retourPrevuLe: daysFromNow(-16),
     rendu: true,
