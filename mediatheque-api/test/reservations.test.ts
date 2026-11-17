@@ -85,14 +85,17 @@ describe("Réservations", () => {
     assert.equal(body.empruntSuivant, null, "une réservation annulée ne reçoit pas l'ouvrage");
   });
 
-  it("protège les réservations des autres membres en 403 et filtre la liste", async () => {
+  it("masque en 404 les réservations des autres membres et filtre la liste", async () => {
     const { bookId } = await borrowedBook("librarian");
     const bobReservation = await reserve("bob", bookId);
 
     const read = await ctx.api(`/api/reservations/${bobReservation.body.id}`, { token: tokens.alice });
     const cancel = await ctx.api(`/api/reservations/${bobReservation.body.id}`, { method: "DELETE", token: tokens.alice });
-    assert.equal(read.status, 403);
-    assert.equal(cancel.status, 403);
+    const missing = await ctx.api("/api/reservations/999999", { token: tokens.alice });
+    for (const response of [read, cancel]) {
+      assert.equal(response.status, 404);
+      assert.deepEqual(response.body, missing.body);
+    }
 
     const list = await ctx.api("/api/reservations?limite=50", { token: tokens.alice });
     assert.ok(list.body.donnees.every((item: Json) => item.membreId === ctx.users.alice.id));

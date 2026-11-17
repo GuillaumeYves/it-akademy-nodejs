@@ -30,7 +30,7 @@ export function loanRoutes({ loanService }: { loanService: LoanService }): Route
         summary: "Détail d'un emprunt",
         access: "authenticated",
         params: idParamsSchema,
-        responses: { 200: { description: "Emprunt", schema: loanSchema }, ...errors(400, 401, 403, 404) },
+        responses: { 200: { description: "Emprunt", schema: loanSchema }, ...errors(400, 401, 404) },
         handler: async ({ params, user }) => ok(await loanService.getById(params.id, user)),
       }),
 
@@ -53,7 +53,7 @@ export function loanRoutes({ loanService }: { loanService: LoanService }): Route
         access: "authenticated",
         params: idParamsSchema,
         body: updateLoanSchema,
-        responses: { 200: { description: "Emprunt modifié", schema: loanSchema }, ...errors(400, 401, 403, 404) },
+        responses: { 200: { description: "Emprunt modifié", schema: loanSchema }, ...errors(400, 401, 404) },
         handler: async ({ params, body, user }) => ok(await loanService.update(params.id, body, user)),
       }),
 
@@ -65,7 +65,7 @@ export function loanRoutes({ loanService }: { loanService: LoanService }): Route
           "Clôture l'emprunt. Si l'ouvrage est réservé, la plus ancienne réservation devient un emprunt dans la même transaction ; sinon l'ouvrage redevient disponible.",
         access: "authenticated",
         params: idParamsSchema,
-        responses: { 200: { description: "Emprunt clôturé", schema: returnSchema }, ...errors(400, 401, 403, 404, 409) },
+        responses: { 200: { description: "Emprunt clôturé", schema: returnSchema }, ...errors(400, 401, 404, 409) },
         handler: async ({ params, user }) => ok(await loanService.returnLoan(params.id, user)),
       }),
 

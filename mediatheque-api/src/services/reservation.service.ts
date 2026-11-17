@@ -2,10 +2,9 @@ import type { AuthUser } from "../domain/types.ts";
 import { conflict, notFound, prismaErrorCode } from "../erreurs.ts";
 import type { DataAccess } from "../repositories/index.ts";
 import type { CreateReservationInput, ListReservationsQuery } from "../schemas/reservation.schema.ts";
-import { assertOwnerOrLibrarian, ownerScope, resolveBeneficiary } from "./ownership.ts";
+import { assertVisibleTo, ownerScope, resolveBeneficiary } from "./ownership.ts";
 import { toPage, toSkipTake } from "./pagination.ts";
 
-const FOREIGN_RESERVATION = "Cette réservation appartient à un autre membre";
 const reservationNotFound = () => notFound("Réservation introuvable");
 
 // Règles métier des réservations : file d'attente sur les ouvrages indisponibles.
@@ -15,7 +14,7 @@ export function createReservationService({ repositories, transaction }: DataAcce
   async function getById(id: number, actor: AuthUser) {
     const reservation = await reservations.findById(id);
     if (!reservation) throw reservationNotFound();
-    assertOwnerOrLibrarian(reservation.membreId, actor, FOREIGN_RESERVATION);
+    assertVisibleTo(reservation.membreId, actor, reservationNotFound);
     return reservation;
   }
 

@@ -32,7 +32,7 @@ export function reservationRoutes({ reservationService }: { reservationService: 
         summary: "Détail d'une réservation",
         access: "authenticated",
         params: idParamsSchema,
-        responses: { 200: { description: "Réservation", schema: reservationSchema }, ...errors(400, 401, 403, 404) },
+        responses: { 200: { description: "Réservation", schema: reservationSchema }, ...errors(400, 401, 404) },
         handler: async ({ params, user }) => ok(await reservationService.getById(params.id, user)),
       }),
 
@@ -55,7 +55,7 @@ export function reservationRoutes({ reservationService }: { reservationService: 
         description: "La réservation passe au statut annulee et sort de la file d'attente.",
         access: "authenticated",
         params: idParamsSchema,
-        responses: { 204: { description: "Réservation annulée" }, ...errors(400, 401, 403, 404, 409) },
+        responses: { 204: { description: "Réservation annulée" }, ...errors(400, 401, 404, 409) },
         handler: async ({ params, user }) => {
           await reservationService.cancel(params.id, user);
           return noContent();

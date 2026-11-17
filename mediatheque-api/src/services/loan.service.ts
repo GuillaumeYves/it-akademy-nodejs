@@ -2,11 +2,10 @@ import type { AuthUser } from "../domain/types.ts";
 import { badRequest, conflict, notFound } from "../erreurs.ts";
 import type { DataAccess, Repositories } from "../repositories/index.ts";
 import type { CreateLoanInput, ListLoansQuery, UpdateLoanInput } from "../schemas/loan.schema.ts";
-import { assertOwnerOrLibrarian, ownerScope, resolveBeneficiary } from "./ownership.ts";
+import { assertVisibleTo, ownerScope, resolveBeneficiary } from "./ownership.ts";
 import { toPage, toSkipTake } from "./pagination.ts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const FOREIGN_LOAN = "Cet emprunt appartient à un autre membre";
 const loanNotFound = () => notFound("Emprunt introuvable");
 
 // Règles métier des emprunts : droits par propriétaire et changements d'état atomiques.
@@ -33,7 +32,7 @@ export function createLoanService({ repositories, transaction }: DataAccess, { l
   async function getById(id: number, actor: AuthUser) {
     const loan = await loans.findById(id);
     if (!loan) throw loanNotFound();
-    assertOwnerOrLibrarian(loan.emprunteurId, actor, FOREIGN_LOAN);
+    assertVisibleTo(loan.emprunteurId, actor, loanNotFound);
     return loan;
   }
 
@@ -76,7 +75,7 @@ export function createLoanService({ repositories, transaction }: DataAccess, { l
       transaction(async (repos) => {
         const loan = await repos.loans.findById(id);
         if (!loan) throw loanNotFound();
-        assertOwnerOrLibrarian(loan.emprunteurId, actor, FOREIGN_LOAN);
+        assertVisibleTo(loan.emprunteurId, actor, loanNotFound);
         if (!(await repos.loans.closeIfActive(id, new Date()))) throw conflict("Emprunt déjà rendu");
 
         const empruntSuivant = await releaseBook(repos, loan.ouvrageId);

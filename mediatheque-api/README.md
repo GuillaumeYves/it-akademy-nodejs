@@ -209,16 +209,21 @@ La connexion renvoie le même 401 que le compte existe ou non.
 | `GET /api/ouvrages`, `GET /api/ouvrages/:id` | 401 | oui (seuls ses emprunts en cours sont joints) | oui |
 | `POST`, `PATCH`, `DELETE /api/ouvrages` | 401 | 403 | oui |
 | `GET /api/emprunts` | 401 | ses emprunts uniquement | tous |
-| `GET /api/emprunts/:id` | 401 | le sien, sinon 403 | tous |
+| `GET /api/emprunts/:id` | 401 | le sien, sinon 404 | tous |
 | `POST /api/emprunts` | 401 | pour lui-même | pour lui ou pour un membre (`emprunteurId`) |
-| `PATCH /api/emprunts/:id` | 401 | le sien, sinon 403 | tous |
-| `POST /api/emprunts/:id/retour` | 401 | le sien, sinon 403 | tous |
+| `PATCH /api/emprunts/:id` | 401 | le sien, sinon 404 | tous |
+| `POST /api/emprunts/:id/retour` | 401 | le sien, sinon 404 | tous |
 | `DELETE /api/emprunts/:id` | 401 | 403 | oui |
 | `GET /api/reservations` | 401 | ses réservations uniquement | toutes |
-| `GET /api/reservations/:id` | 401 | la sienne, sinon 403 | toutes |
+| `GET /api/reservations/:id` | 401 | la sienne, sinon 404 | toutes |
 | `POST /api/reservations` | 401 | pour lui-même | pour lui ou pour un membre (`membreId`) |
-| `DELETE /api/reservations/:id` (annulation) | 401 | la sienne, sinon 403 | toutes |
+| `DELETE /api/reservations/:id` (annulation) | 401 | la sienne, sinon 404 | toutes |
 | `POST /api/assistant/flux`, `DELETE /api/assistant/memoire` | 401 | ses propres données | ses propres données |
+
+**403 ou 404 sur la ressource d'un autre membre** : l'API répond 404, avec exactement le même corps
+que pour un identifiant inexistant. Un 403 confirmerait que l'emprunt ou la réservation existe, ce qui
+permettrait d'énumérer les identifiants. Le 403 reste réservé aux actions interdites par le rôle
+(un membre qui crée un ouvrage, par exemple), où il n'y a rien à cacher.
 
 Le schéma de `PATCH /api/emprunts/:id` n'accepte que `retourPrevuLe` : ni l'ouvrage, ni le propriétaire,
 ni l'état rendu ne peuvent changer par cette route.
@@ -253,11 +258,11 @@ La suppression renvoie 409 si l'ouvrage est emprunté ou s'il a un historique d'
 | Méthode | Route | Succès | Erreurs |
 | ------- | ----- | ------ | ------- |
 | GET | `/api/emprunts?rendu=false&ouvrageId=1` | 200 | 400, 401 |
-| GET | `/api/emprunts/:id` | 200 | 400, 401, 403, 404 |
+| GET | `/api/emprunts/:id` | 200 | 400, 401, 404 |
 | POST | `/api/emprunts` | 201 | 400, 401, 404, 409 |
-| PATCH | `/api/emprunts/:id` | 200 | 400, 401, 403, 404 |
+| PATCH | `/api/emprunts/:id` | 200 | 400, 401, 404 |
 | DELETE | `/api/emprunts/:id` | 204 | 400, 401, 403, 404 |
-| POST | `/api/emprunts/:id/retour` | 200 | 400, 401, 403, 404, 409 |
+| POST | `/api/emprunts/:id/retour` | 200 | 400, 401, 404, 409 |
 
 Champs : `ouvrageId`, `emprunteurId` (bibliothécaire uniquement), `empruntLe` (date ISO, maintenant par défaut),
 `retourPrevuLe` (date ISO, postérieure à l'emprunt).
@@ -272,9 +277,9 @@ Règles :
 | Méthode | Route | Succès | Erreurs |
 | ------- | ----- | ------ | ------- |
 | GET | `/api/reservations?statut=active&ouvrageId=1` | 200 | 400, 401 |
-| GET | `/api/reservations/:id` | 200 | 400, 401, 403, 404 |
+| GET | `/api/reservations/:id` | 200 | 400, 401, 404 |
 | POST | `/api/reservations` | 201 | 400, 401, 404, 409 |
-| DELETE | `/api/reservations/:id` | 204 | 400, 401, 403, 404, 409 |
+| DELETE | `/api/reservations/:id` | 204 | 400, 401, 404, 409 |
 
 Une réservation a le statut `active`, `annulee` ou `honoree`. Règles :
 - seul un ouvrage **indisponible** se réserve ; un ouvrage disponible renvoie 409 : il suffit de l'emprunter ;
@@ -320,8 +325,8 @@ sequenceDiagram
 | ----- | ------ |
 | validation Zod, identifiant mal formé, JSON invalide | 400 |
 | jeton absent, invalide, expiré ou signé par un autre secret | 401 |
-| rôle insuffisant, ressource d'un autre membre, origine CORS non déclarée | 403 |
-| ressource absente (dont Prisma `P2025`) | 404 |
+| rôle insuffisant, origine CORS non déclarée | 403 |
+| ressource absente (dont Prisma `P2025`) ou appartenant à un autre membre | 404 |
 | conflit métier, clé étrangère (`P2003`), doublon (`P2002`) | 409 |
 | corps JSON de plus de 100 Ko | 413 |
 | limite de débit atteinte | 429 |
@@ -408,7 +413,7 @@ Fonctionnement :
 
 | Risque OWASP API | Exemple | Parade dans ce projet |
 | ---------------- | ------- | --------------------- |
-| API1 Autorisation au niveau des objets cassée | `GET /api/emprunts/42` d'un autre membre | contrôle de propriété dans les services (403), listes filtrées sur le compte, outils de l'assistant liés à l'identité du jeton |
+| API1 Autorisation au niveau des objets cassée | `GET /api/emprunts/42` d'un autre membre | contrôle de propriété dans les services (404, identique à une ressource absente), listes filtrées sur le compte, outils de l'assistant liés à l'identité du jeton |
 | API2 Authentification cassée | jetons sans expiration, secret faible | access token de 15 minutes, secret aléatoire de 32 caractères au moins contrôlé au démarrage, rotation et détection de rejeu des refresh tokens, 429 sur `/api/auth` |
 | API3 Exposition excessive de données | renvoyer `motDePasseHache` | `select` explicite dans les dépôts, schémas de réponse documentés, emprunts des autres masqués dans le détail d'un ouvrage |
 | API4 Consommation de ressources illimitée | corps de 50 Mo, liste non paginée, questions en rafale | JSON limité à 100 Ko, pagination plafonnée à 50, question de 500 caractères, 10 questions par minute, quota de jetons par jour, jetons de sortie plafonnés, flux arrêté à la déconnexion |
@@ -444,7 +449,7 @@ les tests si le nom de la base ne contient pas `test`. Chaque fichier repart d'u
 | Fichier | Couverture |
 | ------- | ---------- |
 | `test/auth.test.ts` | inscription, doublon, connexion réussie et échouée, jeton absent ou forgé, rotation, vol de refresh token, déconnexion |
-| `test/access.test.ts` | 403 sur rôle insuffisant, propriété des emprunts, PATCH sans changement de propriétaire |
+| `test/access.test.ts` | 403 sur rôle insuffisant, 404 sur l'emprunt d'un autre membre identique à un emprunt absent, plafond de `?limite=`, PATCH sans changement de propriétaire |
 | `test/hardening.test.ts` | en-têtes helmet, CORS, 413, réponse sans pile, 429 à la onzième tentative |
 | `test/reservations.test.ts` | réservation d'un ouvrage indisponible, 409 (disponible, déjà emprunté, doublon simultané), passage au suivant lors du retour, annulation, droits |
 | `test/assistant.test.ts` | 401, 400, flux SSE (`data:` puis `event: fin`), appel d'outil, isolation des emprunts entre membres, mémoire, 429 |
