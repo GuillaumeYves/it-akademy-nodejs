@@ -1,10 +1,11 @@
 // Point d'entrée : connexion à la base, démarrage du serveur et arrêt propre.
 import { createApp } from "./app.js";
-import { config } from "./config.js";
+import { loadConfig } from "./config.js";
 import { createPrismaClient } from "./db/prisma.js";
 
+const config = loadConfig();
 const prisma = createPrismaClient(config.databaseUrl);
-const server = createApp({ prisma }).listen(config.port, () => {
+const server = createApp({ prisma, config }).listen(config.port, () => {
   console.log(`API médiathèque à l'écoute sur http://localhost:${config.port}`);
 });
 

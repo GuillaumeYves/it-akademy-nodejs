@@ -9,6 +9,8 @@ export class HttpError extends Error {
 }
 
 export const badRequest = (message, details) => new HttpError(400, message, details);
+export const unauthorized = (message = "Authentification requise") => new HttpError(401, message);
+export const forbidden = (message = "Accès refusé") => new HttpError(403, message);
 export const notFound = (message = "Ressource introuvable") => new HttpError(404, message);
 export const conflict = (message) => new HttpError(409, message);
 
@@ -25,9 +27,13 @@ const BODY_PARSER_ERRORS = {
   "entity.too.large": { status: 413, message: "Corps de requête trop volumineux" },
 };
 
+// Toute erreur de la bibliothèque jose (codes ERR_JWT_*, ERR_JWS_*) signale un jeton invalide.
+const isTokenError = (error) => /^ERR_JW[STEK]/.test(error?.code ?? "");
+
 // Convertit n'importe quelle erreur en HttpError, ou null si elle est inattendue.
 export function toHttpError(error) {
   if (error instanceof HttpError) return error;
+  if (isTokenError(error)) return unauthorized("Jeton invalide ou expiré");
 
   const known = PRISMA_ERRORS[error?.code] ?? BODY_PARSER_ERRORS[error?.type];
   return known ? new HttpError(known.status, known.message) : null;

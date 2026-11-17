@@ -1,20 +1,23 @@
-// Résumé de l'ouvrage joint à chaque emprunt.
-const WITH_BOOK = { ouvrage: { select: { id: true, titre: true, auteur: true } } };
+// Relations jointes à chaque emprunt : résumé de l'ouvrage et compte de l'emprunteur.
+const WITH_RELATIONS = {
+  ouvrage: { select: { id: true, titre: true, auteur: true } },
+  emprunteur: { select: { id: true, email: true } },
+};
 
 // Accès aux emprunts. db est le client Prisma ou un client de transaction.
 export function createLoanRepository(db) {
   return {
     async findPage({ where, skip, take }) {
       const [items, total] = await Promise.all([
-        db.emprunt.findMany({ where, skip, take, include: WITH_BOOK, orderBy: { id: "asc" } }),
+        db.emprunt.findMany({ where, skip, take, include: WITH_RELATIONS, orderBy: { id: "asc" } }),
         db.emprunt.count({ where }),
       ]);
       return { items, total };
     },
 
-    findById: (id) => db.emprunt.findUnique({ where: { id }, include: WITH_BOOK }),
-    create: (data) => db.emprunt.create({ data, include: WITH_BOOK }),
-    update: (id, data) => db.emprunt.update({ where: { id }, data, include: WITH_BOOK }),
+    findById: (id) => db.emprunt.findUnique({ where: { id }, include: WITH_RELATIONS }),
+    create: (data) => db.emprunt.create({ data, include: WITH_RELATIONS }),
+    update: (id, data) => db.emprunt.update({ where: { id }, data, include: WITH_RELATIONS }),
     delete: (id) => db.emprunt.delete({ where: { id } }),
     countActiveForBook: (ouvrageId) => db.emprunt.count({ where: { ouvrageId, rendu: false } }),
 
