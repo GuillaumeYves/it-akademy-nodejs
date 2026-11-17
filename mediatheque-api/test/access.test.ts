@@ -24,6 +24,20 @@ describe("Autorisation sur le catalogue", () => {
     assert.equal(status, 200);
   });
 
+  it("ramène une limite trop grande au plafond de 50 au lieu de la refuser", async () => {
+    const { status, body } = await ctx.api("/api/ouvrages?limite=500", { token: tokens.alice });
+    assert.equal(status, 200);
+    assert.equal(body.limite, 50);
+    assert.ok(body.donnees.length <= 50);
+  });
+
+  it("refuse toujours une limite nulle ou non numérique", async () => {
+    for (const limite of ["0", "abc"]) {
+      const { status } = await ctx.api(`/api/ouvrages?limite=${limite}`, { token: tokens.alice });
+      assert.equal(status, 400);
+    }
+  });
+
   it("refuse la création d'un ouvrage à un membre en 403", async () => {
     const { status } = await ctx.api("/api/ouvrages", {
       method: "POST",

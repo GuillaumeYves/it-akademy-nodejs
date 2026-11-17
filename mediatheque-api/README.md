@@ -226,7 +226,9 @@ ni l'état rendu ne peuvent changer par cette route.
 ## Ressources
 
 Toutes les réponses sont en JSON, sauf le flux de l'assistant. Les listes sont paginées avec `?page=` (défaut 1)
-et `?limite=` (défaut 10, 50 au plus).
+et `?limite=` (défaut 10). Une limite supérieure à 50 est ramenée à 50 plutôt que refusée,
+comme le demande le sujet ; le champ `limite` de la réponse indique la valeur appliquée.
+Une limite nulle, négative ou non numérique reste refusée en 400.
 
 ```json
 { "donnees": [], "page": 1, "limite": 10, "total": 42, "pages": 5 }
